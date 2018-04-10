@@ -199,5 +199,89 @@ np.array(tf_vect.get_feature_names())[tsvd_2c.components_[20].argsort()[-10:][::
 
 #Kernel PCA
 
+#create a circular dataset to show the Kernel PCA
+def circular_points(radius, N):
+	return np.array([[np.cos(2*np.pi*t/N)*radius, np.sin(2*np.pi*t/N)*radius] for t in range(N)])
 
+N_points = 50
 
+fake_circular_data = np.vstack([circular_points(1.0, N_points), circular_points(5.0, N_points)])
+
+fake_circular_data += np.random.rand(*fake_circular_data.shape)
+
+fake_circular_target = np.array([0]*N_points + [1]*N_points)
+
+plt.scatter(fake_circular_data[:,0], fake_circular_data[:,1], c=fake_circular_target, alpha=0.8, s=60, marker='o', edgecolors='white')
+plt.show()
+
+#%%
+
+#Due to the circular feature of the data, all linear transformation would fail to separate the data.
+
+from sklearn.decomposition import KernelPCA
+
+kpca_2c = KernelPCA(n_components=2, kernel='rbf')
+
+X_kpca_2c = kpca_2c.fit_transform(fake_circular_data)
+
+plt.scatter(X_kpca_2c[:,0], X_kpca_2c[:,1], c=fake_circular_target, alpha=0.8, s=60, marker='o', edgecolors='white')
+plt.show()
+
+#Now after the Kernel PCA transformation we can use linear techniques
+
+#%%
+
+#T-SNE
+
+# The core of the algorithm is based on two rules: the first is that recurrent similar observations must have a greater contribution to the output (achieved with a probability distribution function); second, the distribution in the high dimensional space must be similar to the one in the small space (achieved minimized the KL, Kullback-Leibler, divergence between the two probability distribution functions). 
+
+#Apply T-SNE to the iris dataset
+
+from sklearn.manifold import TSNE
+
+from sklearn.datasets import load_iris
+
+iris = load_iris()
+
+X, y = iris.data, iris.target
+X_tsne = TSNE(n_components=2).fit_transform(X)
+
+plt.scatter(X_tsne[:,0], X_tsne[:, 1], c=y, alpha=0.8, s=60, marker='o', edgecolors='white')
+
+plt.show()
+						
+#%%
+
+#Restricted Boltzmann Machine (RBM)
+
+#The main hypothesis of this technique is that the input dataset is composed of features that represent probability (binary values or real values in the [0,1] range) since RBM is a probabilistic approach.
+
+from sklearn import preprocessing
+from sklearn.neural_network import BernoulliRBM
+
+n_components = 144 #Try with 64, 100, 144
+
+olivetti_faces = datasets.fetch_olivetti_faces()
+
+X = preprocessing.binarize(preprocessing.scale(olivetti_faces.data.astype(float)), 0.5)
+
+rbm = BernoulliRBM(n_components=n_components, learning_rate=0.01, n_iter=100)
+
+rbm.fit(X)
+
+plt.figure(figsize=(4.2, 4))
+
+for i, comp in enumerate(rbm.components_):
+	plt.subplot(int(np.sqrt(n_components+1)), int(np.sqrt(n_components+1)), i+1)
+
+plt.imshow(comp.reshape((64, 64)), cmap=plt.cm.gray_r, interpolation='nearest')
+
+plt.xticks(())
+
+plt.yticks(())
+
+plt.suptitle(str(n_components) + ' components extracted by RBM', fontsize=16)
+
+plt.subplots_adjust(0.08, 0.02, 0.92, 0.85, 0.08, 0.23)
+
+plt.show()
